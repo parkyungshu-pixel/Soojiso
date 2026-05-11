@@ -66,7 +66,7 @@ object ListRepository {
         prefs(context).getInt(KEY_MAX_PINS, DEFAULT_MAX_PINS).coerceAtLeast(1)
 
     fun setMaxPins(context: Context, n: Int) {
-        val clamped = n.coerceIn(1, 20)
+        val clamped = n.coerceIn(1, 30)
         prefs(context).edit().putInt(KEY_MAX_PINS, clamped).apply()
         // Also trim pins if the new max is smaller
         val pins = getPins(context)

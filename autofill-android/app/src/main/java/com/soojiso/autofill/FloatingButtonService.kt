@@ -190,6 +190,14 @@ class FloatingButtonService : Service() {
             Toast.makeText(this, R.string.toast_no_pins, Toast.LENGTH_SHORT).show()
             return
         }
+        // Capture the currently-focused input field BEFORE showing the
+        // picker, so selection fills the right field (e.g. password, not
+        // the email we had already filled).
+        val gotTarget = AutoFillAccessibilityService.captureCurrentTarget()
+        if (!gotTarget) {
+            Toast.makeText(this, R.string.toast_no_focus, Toast.LENGTH_SHORT).show()
+            return
+        }
         showPinPicker(pins)
     }
 
@@ -226,8 +234,9 @@ class FloatingButtonService : Service() {
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 setOnClickListener {
+                    val result = AutoFillAccessibilityService.triggerFillPinned(value)
                     removePinPicker()
-                    showResult(AutoFillAccessibilityService.triggerFillPinned(value))
+                    showResult(result)
                 }
             }
             val lp = LinearLayout.LayoutParams(
@@ -277,6 +286,10 @@ class FloatingButtonService : Service() {
         } catch (_: Throwable) { /* ignore */ }
         pickerView = null
         pickerParams = null
+        // Clear cached target when picker is dismissed without selection;
+        // if a selection happened, the service already cleared it in
+        // triggerFillPinned.
+        AutoFillAccessibilityService.clearCapturedTarget()
     }
 
     // -------- Utils --------
