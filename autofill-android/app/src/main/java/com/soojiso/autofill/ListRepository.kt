@@ -4,24 +4,28 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Simple persistence backed by SharedPreferences.
+ * Persistence for the AutoFill rotating list and the "Keep" list.
  *
- * Stores three things:
- *  - items: the rotating auto-fill list (newline separated)
- *  - pins:  user-curated "favorites" (newline separated, max N)
- *  - max_pins: user-configurable cap on the number of pinned items
+ * - `items` is the main rotating list. Each ⚡ Fill tap removes and
+ *   types the first line into the focused input.
+ * - `keep` is a parallel list the user builds explicitly by tapping
+ *   the Keep button right after a fill. It's an audit log of
+ *   values the user wants to remember (e.g. IMEIs they already used
+ *   and want to track). Nothing is auto-added here.
+ * - `lastConsumed` is the most recent line removed from `items`,
+ *   which is what the Keep button promotes to the Keep list when
+ *   tapped.
  */
 object ListRepository {
     private const val PREFS = "autofill_prefs"
     private const val KEY_ITEMS = "items"
-    private const val KEY_PINS = "pins"
-    private const val KEY_MAX_PINS = "max_pins"
-    const val DEFAULT_MAX_PINS = 5
+    private const val KEY_KEEP = "keep"
+    private const val KEY_LAST_CONSUMED = "last_consumed"
 
     fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    // ---------- Rotating list ----------
+    // ---------- Main rotating list ----------
 
     fun getItems(context: Context): List<String> =
         splitNonEmpty(prefs(context).getString(KEY_ITEMS, "") ?: "")
@@ -36,42 +40,42 @@ object ListRepository {
         saveItems(context, splitNonEmpty(text))
     }
 
-    // ---------- Pins ----------
+    // ---------- Keep list ----------
 
-    fun getPins(context: Context): List<String> =
-        splitNonEmpty(prefs(context).getString(KEY_PINS, "") ?: "")
+    fun getKeep(context: Context): List<String> =
+        splitNonEmpty(prefs(context).getString(KEY_KEEP, "") ?: "")
 
-    fun savePins(context: Context, pins: List<String>) {
-        val max = getMaxPins(context)
-        val trimmed = pins.take(max)
+    fun saveKeep(context: Context, items: List<String>) {
         prefs(context).edit()
-            .putString(KEY_PINS, trimmed.joinToString("\n"))
+            .putString(KEY_KEEP, items.joinToString("\n"))
             .apply()
     }
 
-    fun savePinsText(context: Context, text: String) {
-        savePins(context, splitNonEmpty(text))
+    fun saveKeepText(context: Context, text: String) {
+        saveKeep(context, splitNonEmpty(text))
     }
 
-    /** Adds [value] to the front of the pins list, de-duplicated, respecting max. */
-    fun addPinToFront(context: Context, value: String) {
+    /** Append [value] to the Keep list if not already the most recent entry. */
+    fun appendKeep(context: Context, value: String) {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) return
-        val current = getPins(context).filter { it != trimmed }.toMutableList()
-        current.add(0, trimmed)
-        savePins(context, current)
+        val current = getKeep(context).toMutableList()
+        // Avoid duplicate back-to-back entries
+        if (current.lastOrNull() == trimmed) return
+        current.add(trimmed)
+        saveKeep(context, current)
     }
 
-    fun getMaxPins(context: Context): Int =
-        prefs(context).getInt(KEY_MAX_PINS, DEFAULT_MAX_PINS).coerceAtLeast(1)
+    // ---------- Last consumed (for the Keep button) ----------
 
-    fun setMaxPins(context: Context, n: Int) {
-        val clamped = n.coerceIn(1, 30)
-        prefs(context).edit().putInt(KEY_MAX_PINS, clamped).apply()
-        // Also trim pins if the new max is smaller
-        val pins = getPins(context)
-        if (pins.size > clamped) savePins(context, pins.take(clamped))
+    fun getLastConsumed(context: Context): String? =
+        prefs(context).getString(KEY_LAST_CONSUMED, null)?.takeIf { it.isNotEmpty() }
+
+    fun setLastConsumed(context: Context, value: String?) {
+        prefs(context).edit().putString(KEY_LAST_CONSUMED, value ?: "").apply()
     }
+
+    fun clearLastConsumed(context: Context) = setLastConsumed(context, null)
 
     // ---------- Helpers ----------
 
