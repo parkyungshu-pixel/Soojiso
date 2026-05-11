@@ -28,6 +28,11 @@ import kotlin.math.abs
  *  ⚡  — fill the next item from the saved list (consumes it)
  *  📋 — fill whatever is on the system clipboard right now
  *  📌 — open a picker of pinned items (up to the configured max)
+ *
+ * All three buttons route to [AutoFillAccessibilityService] which
+ * re-queries the currently focused input field at fill time. We
+ * deliberately no longer cache a node reference when the pin picker
+ * opens (that caused stale-node failures on many devices).
  */
 class FloatingButtonService : Service() {
 
@@ -35,9 +40,7 @@ class FloatingButtonService : Service() {
     private var floatingView: View? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
 
-    // Pin picker overlay (shown on top of the floating panel when 📌 is tapped)
     private var pickerView: View? = null
-    private var pickerParams: WindowManager.LayoutParams? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -125,15 +128,14 @@ class FloatingButtonService : Service() {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val view = inflater.inflate(R.layout.floating_button, null)
 
-        val type = overlayType()
-
         layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            type,
+            overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -156,9 +158,7 @@ class FloatingButtonService : Service() {
 
     private fun removeFloatingButton() {
         val v = floatingView ?: return
-        try {
-            windowManager.removeView(v)
-        } catch (_: Throwable) { /* ignore */ }
+        try { windowManager.removeView(v) } catch (_: Throwable) { }
         floatingView = null
     }
 
@@ -190,11 +190,10 @@ class FloatingButtonService : Service() {
             Toast.makeText(this, R.string.toast_no_pins, Toast.LENGTH_SHORT).show()
             return
         }
-        // Capture the currently-focused input field BEFORE showing the
-        // picker, so selection fills the right field (e.g. password, not
-        // the email we had already filled).
-        val gotTarget = AutoFillAccessibilityService.captureCurrentTarget()
-        if (!gotTarget) {
+        // Verify a focused input exists BEFORE opening the picker so we
+        // can show a clear "tap an input first" toast instead of opening
+        // a useless menu.
+        if (!AutoFillAccessibilityService.captureCurrentTarget()) {
             Toast.makeText(this, R.string.toast_no_focus, Toast.LENGTH_SHORT).show()
             return
         }
@@ -223,17 +222,20 @@ class FloatingButtonService : Service() {
         val listContainer = view.findViewById<LinearLayout>(R.id.pin_list)
         val closeBtn = view.findViewById<TextView>(R.id.pin_close)
 
-        // Build one row per pin
         pins.forEachIndexed { index, value ->
             val row = TextView(this).apply {
                 text = "${index + 1}. $value"
-                setTextColor(0xFFF9FAFB.toInt())
+                setTextColor(0xFFF5EEDC.toInt())
                 textSize = 14f
                 setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
                 setBackgroundResource(R.drawable.pin_item_bg)
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 setOnClickListener {
+                    // Fill FIRST (while the target field is still focused
+                    // under the non-focusable picker), then remove the
+                    // picker. Re-querying focus happens inside the
+                    // accessibility service.
                     val result = AutoFillAccessibilityService.triggerFillPinned(value)
                     removePinPicker()
                     showResult(result)
@@ -248,18 +250,21 @@ class FloatingButtonService : Service() {
 
         closeBtn.setOnClickListener { removePinPicker() }
 
-        // Focusable so tapping elsewhere can dismiss; also listens for outside touch
+        // FLAG_NOT_FOCUSABLE is crucial: it keeps the user's input field
+        // focused in the app below, so accessibility focus lookup still
+        // returns the right field when the user taps a pin.
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            // Position to the left of the floating panel so it doesn't cover it.
             val dm = resources.displayMetrics
             val estimatedWidth = dpToPx(240)
             val panelX = layoutParams.x
@@ -276,20 +281,12 @@ class FloatingButtonService : Service() {
 
         windowManager.addView(view, params)
         pickerView = view
-        pickerParams = params
     }
 
     private fun removePinPicker() {
         val v = pickerView ?: return
-        try {
-            windowManager.removeView(v)
-        } catch (_: Throwable) { /* ignore */ }
+        try { windowManager.removeView(v) } catch (_: Throwable) { }
         pickerView = null
-        pickerParams = null
-        // Clear cached target when picker is dismissed without selection;
-        // if a selection happened, the service already cleared it in
-        // triggerFillPinned.
-        AutoFillAccessibilityService.clearCapturedTarget()
     }
 
     // -------- Utils --------
@@ -304,10 +301,7 @@ class FloatingButtonService : Service() {
     private fun dpToPx(dp: Int): Int =
         (dp * resources.displayMetrics.density).toInt()
 
-    /**
-     * Touch listener that supports tapping OR dragging a button.
-     * Dragging moves the whole floating panel, not just the button.
-     */
+    /** Tap-or-drag listener. Drags move the whole floating panel. */
     private inner class DragClickListener(
         private val onClick: () -> Unit
     ) : View.OnTouchListener {
@@ -322,7 +316,6 @@ class FloatingButtonService : Service() {
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    // Close any open picker when starting a new interaction
                     if (pickerView != null) removePinPicker()
                     initialX = layoutParams.x
                     initialY = layoutParams.y
