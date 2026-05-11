@@ -19,16 +19,17 @@ import android.widget.Toast
 import kotlin.math.abs
 
 /**
- * Foreground service that shows a small draggable panel with three
+ * Foreground service that shows a small draggable panel of four
  * buttons on top of every app:
  *
- *  ①  Fill 1 — fill the next list item into the FIRST input field
- *  ②  Fill 2 — fill the next list item into the SECOND input field
- *  ★  Keep  — move the most recently-consumed item to the Keep list
+ *  ①  Fill 1    — consumes next line of the IMEI list into slot 1
+ *  ②  Fill 2    — cycles next line of the persistent 2nd list into slot 2
+ *  🔒 Password — cycles next line of the password list into slot 3
+ *  ★  Keep      — saves the item that slot 1 just consumed
  *
- * All button taps delegate to [AutoFillAccessibilityService] for the
- * actual typing / list manipulation, and show a toast with the
- * outcome.
+ * Each button delegates to [AutoFillAccessibilityService] for the
+ * actual typing and list updates and shows a toast describing the
+ * result.
  */
 class FloatingButtonService : Service() {
 
@@ -134,9 +135,11 @@ class FloatingButtonService : Service() {
         floatingView = view
 
         view.findViewById<View>(R.id.btn_fill_1)
-            .setOnTouchListener(DragClickListener { onFill(1) })
+            .setOnTouchListener(DragClickListener { onFillSlot1() })
         view.findViewById<View>(R.id.btn_fill_2)
-            .setOnTouchListener(DragClickListener { onFill(2) })
+            .setOnTouchListener(DragClickListener { onFillSlot2() })
+        view.findViewById<View>(R.id.btn_fill_password)
+            .setOnTouchListener(DragClickListener { onFillPassword() })
         view.findViewById<View>(R.id.btn_keep)
             .setOnTouchListener(DragClickListener { onKeep() })
     }
@@ -149,12 +152,35 @@ class FloatingButtonService : Service() {
 
     // ---------------- Button actions ----------------
 
-    private fun onFill(slot: Int) {
+    private fun onFillSlot1() = runFill(1) {
+        AutoFillAccessibilityService.triggerFillSlot1()
+    }
+
+    private fun onFillSlot2() = runFill(2) {
+        AutoFillAccessibilityService.triggerFillSlot2()
+    }
+
+    private fun onFillPassword() = runFill(3) {
+        AutoFillAccessibilityService.triggerFillPassword()
+    }
+
+    /**
+     * Shared button runner. Checks the accessibility service is
+     * running, invokes [action], and renders a toast for whatever
+     * [AutoFillAccessibilityService.TriggerResult] came back.
+     *
+     * [slot] is only used in the toast messages so the user knows
+     * which input the fill was aimed at.
+     */
+    private fun runFill(
+        slot: Int,
+        action: () -> AutoFillAccessibilityService.TriggerResult
+    ) {
         if (!AutoFillAccessibilityService.isRunning()) {
             Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
             return
         }
-        val result = AutoFillAccessibilityService.triggerFillNextInto(slot)
+        val result = action()
         val msg = when (result) {
             AutoFillAccessibilityService.TriggerResult.SUCCESS ->
                 getString(R.string.toast_filled_slot, slot)
@@ -163,7 +189,7 @@ class FloatingButtonService : Service() {
             AutoFillAccessibilityService.TriggerResult.NOT_ENOUGH_INPUTS ->
                 getString(R.string.toast_not_enough_inputs, slot)
             AutoFillAccessibilityService.TriggerResult.EMPTY_LIST ->
-                getString(R.string.toast_empty)
+                getString(R.string.toast_empty_slot, slot)
             AutoFillAccessibilityService.TriggerResult.NOT_RUNNING ->
                 getString(R.string.toast_service_off)
         }

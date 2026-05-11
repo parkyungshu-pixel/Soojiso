@@ -41,6 +41,19 @@
         android:contentDescription="Fill second input" />
 
     <TextView
+        android:id="@+id/btn_fill_password"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/floating_button_bg"
+        android:gravity="center"
+        android:text="🔒"
+        android:textColor="@color/on_primary"
+        android:textSize="22sp"
+        android:elevation="8dp"
+        android:contentDescription="Fill password" />
+
+    <TextView
         android:id="@+id/btn_keep"
         android:layout_width="54dp"
         android:layout_height="54dp"
