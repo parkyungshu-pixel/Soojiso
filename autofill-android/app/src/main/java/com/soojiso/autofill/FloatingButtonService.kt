@@ -14,20 +14,30 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import kotlin.math.abs
 
 /**
- * Foreground service that shows a draggable ⚡ button on top of all
- * apps. When tapped, it asks the accessibility service to fill the
- * next item from the saved list into the currently-focused input.
+ * Foreground service that shows a draggable panel of three buttons on
+ * top of all apps:
+ *
+ *  ⚡  — fill the next item from the saved list (consumes it)
+ *  📋 — fill whatever is on the system clipboard right now
+ *  📌 — open a picker of pinned items (up to the configured max)
  */
 class FloatingButtonService : Service() {
 
     private lateinit var windowManager: WindowManager
     private var floatingView: View? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
+
+    // Pin picker overlay (shown on top of the floating panel when 📌 is tapped)
+    private var pickerView: View? = null
+    private var pickerParams: WindowManager.LayoutParams? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -47,9 +57,12 @@ class FloatingButtonService : Service() {
     }
 
     override fun onDestroy() {
+        removePinPicker()
         removeFloatingButton()
         super.onDestroy()
     }
+
+    // -------- Foreground notification --------
 
     private fun startAsForeground() {
         val channelId = "autofill_floating"
@@ -105,17 +118,14 @@ class FloatingButtonService : Service() {
         }
     }
 
+    // -------- Floating panel --------
+
     @Suppress("ClickableViewAccessibility")
     private fun showFloatingButton() {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val view = inflater.inflate(R.layout.floating_button, null)
 
-        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
+        val type = overlayType()
 
         layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -127,36 +137,21 @@ class FloatingButtonService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            // Default position: right side, around 40% from top
             val dm = resources.displayMetrics
-            x = dm.widthPixels - (dpToPx(72))
-            y = (dm.heightPixels * 0.4f).toInt()
+            x = dm.widthPixels - dpToPx(68)
+            y = (dm.heightPixels * 0.35f).toInt()
         }
 
         windowManager.addView(view, layoutParams)
         floatingView = view
 
-        val target = view.findViewById<View>(R.id.floating_text)
-        target.setOnTouchListener(DragClickListener(
-            onClick = { onButtonTapped() }
-        ))
-    }
+        val btnList = view.findViewById<View>(R.id.btn_fill_list)
+        val btnClip = view.findViewById<View>(R.id.btn_fill_clipboard)
+        val btnPin = view.findViewById<View>(R.id.btn_fill_pinned)
 
-    private fun onButtonTapped() {
-        if (!AutoFillAccessibilityService.isRunning()) {
-            Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
-            return
-        }
-        when (AutoFillAccessibilityService.triggerFill()) {
-            AutoFillAccessibilityService.TriggerResult.SUCCESS ->
-                Toast.makeText(this, R.string.toast_filled, Toast.LENGTH_SHORT).show()
-            AutoFillAccessibilityService.TriggerResult.NO_INPUT ->
-                Toast.makeText(this, R.string.toast_no_focus, Toast.LENGTH_SHORT).show()
-            AutoFillAccessibilityService.TriggerResult.EMPTY_LIST ->
-                Toast.makeText(this, R.string.toast_empty, Toast.LENGTH_SHORT).show()
-            AutoFillAccessibilityService.TriggerResult.NOT_RUNNING ->
-                Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
-        }
+        btnList.setOnTouchListener(DragClickListener { onFillListTapped() })
+        btnClip.setOnTouchListener(DragClickListener { onFillClipboardTapped() })
+        btnPin.setOnTouchListener(DragClickListener { onFillPinnedTapped() })
     }
 
     private fun removeFloatingButton() {
@@ -167,12 +162,151 @@ class FloatingButtonService : Service() {
         floatingView = null
     }
 
+    // -------- Button actions --------
+
+    private fun onFillListTapped() {
+        if (!AutoFillAccessibilityService.isRunning()) {
+            Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
+            return
+        }
+        showResult(AutoFillAccessibilityService.triggerFillNextFromList())
+    }
+
+    private fun onFillClipboardTapped() {
+        if (!AutoFillAccessibilityService.isRunning()) {
+            Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
+            return
+        }
+        showResult(AutoFillAccessibilityService.triggerFillLatestClipboard())
+    }
+
+    private fun onFillPinnedTapped() {
+        if (!AutoFillAccessibilityService.isRunning()) {
+            Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val pins = ListRepository.getPins(this)
+        if (pins.isEmpty()) {
+            Toast.makeText(this, R.string.toast_no_pins, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // Capture the currently-focused input field BEFORE showing the
+        // picker, so selection fills the right field (e.g. password, not
+        // the email we had already filled).
+        val gotTarget = AutoFillAccessibilityService.captureCurrentTarget()
+        if (!gotTarget) {
+            Toast.makeText(this, R.string.toast_no_focus, Toast.LENGTH_SHORT).show()
+            return
+        }
+        showPinPicker(pins)
+    }
+
+    private fun showResult(result: AutoFillAccessibilityService.TriggerResult) {
+        val msgRes = when (result) {
+            AutoFillAccessibilityService.TriggerResult.SUCCESS -> R.string.toast_filled
+            AutoFillAccessibilityService.TriggerResult.NO_INPUT -> R.string.toast_no_focus
+            AutoFillAccessibilityService.TriggerResult.EMPTY_LIST -> R.string.toast_empty
+            AutoFillAccessibilityService.TriggerResult.EMPTY_CLIPBOARD -> R.string.toast_empty_clipboard
+            AutoFillAccessibilityService.TriggerResult.NOT_RUNNING -> R.string.toast_service_off
+        }
+        Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show()
+    }
+
+    // -------- Pin picker overlay --------
+
+    @Suppress("ClickableViewAccessibility")
+    private fun showPinPicker(pins: List<String>) {
+        removePinPicker()
+
+        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val view = inflater.inflate(R.layout.pin_picker, null)
+        val listContainer = view.findViewById<LinearLayout>(R.id.pin_list)
+        val closeBtn = view.findViewById<TextView>(R.id.pin_close)
+
+        // Build one row per pin
+        pins.forEachIndexed { index, value ->
+            val row = TextView(this).apply {
+                text = "${index + 1}. $value"
+                setTextColor(0xFFF9FAFB.toInt())
+                textSize = 14f
+                setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
+                setBackgroundResource(R.drawable.pin_item_bg)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setOnClickListener {
+                    val result = AutoFillAccessibilityService.triggerFillPinned(value)
+                    removePinPicker()
+                    showResult(result)
+                }
+            }
+            val lp = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dpToPx(4) }
+            listContainer.addView(row, lp)
+        }
+
+        closeBtn.setOnClickListener { removePinPicker() }
+
+        // Focusable so tapping elsewhere can dismiss; also listens for outside touch
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            // Position to the left of the floating panel so it doesn't cover it.
+            val dm = resources.displayMetrics
+            val estimatedWidth = dpToPx(240)
+            val panelX = layoutParams.x
+            x = (panelX - estimatedWidth - dpToPx(12)).coerceAtLeast(dpToPx(8))
+            y = layoutParams.y.coerceAtMost(dm.heightPixels - dpToPx(260))
+        }
+
+        view.setOnTouchListener { _, ev ->
+            if (ev.action == MotionEvent.ACTION_OUTSIDE) {
+                removePinPicker()
+                true
+            } else false
+        }
+
+        windowManager.addView(view, params)
+        pickerView = view
+        pickerParams = params
+    }
+
+    private fun removePinPicker() {
+        val v = pickerView ?: return
+        try {
+            windowManager.removeView(v)
+        } catch (_: Throwable) { /* ignore */ }
+        pickerView = null
+        pickerParams = null
+        // Clear cached target when picker is dismissed without selection;
+        // if a selection happened, the service already cleared it in
+        // triggerFillPinned.
+        AutoFillAccessibilityService.clearCapturedTarget()
+    }
+
+    // -------- Utils --------
+
+    private fun overlayType(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+
     private fun dpToPx(dp: Int): Int =
         (dp * resources.displayMetrics.density).toInt()
 
     /**
-     * Touch listener that supports both tapping and dragging the
-     * floating button across the screen.
+     * Touch listener that supports tapping OR dragging a button.
+     * Dragging moves the whole floating panel, not just the button.
      */
     private inner class DragClickListener(
         private val onClick: () -> Unit
@@ -182,12 +316,14 @@ class FloatingButtonService : Service() {
         private var initialTouchX = 0f
         private var initialTouchY = 0f
         private var moved = false
-        private val touchSlop = android.view.ViewConfiguration.get(this@FloatingButtonService)
-            .scaledTouchSlop
+        private val touchSlop =
+            android.view.ViewConfiguration.get(this@FloatingButtonService).scaledTouchSlop
 
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    // Close any open picker when starting a new interaction
+                    if (pickerView != null) removePinPicker()
                     initialX = layoutParams.x
                     initialY = layoutParams.y
                     initialTouchX = event.rawX
@@ -196,8 +332,8 @@ class FloatingButtonService : Service() {
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = (event.rawX - initialTouchX)
-                    val dy = (event.rawY - initialTouchY)
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
                     if (!moved && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         moved = true
                     }

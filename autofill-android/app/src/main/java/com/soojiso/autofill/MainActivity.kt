@@ -21,17 +21,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Prefill the editor with the saved list
-        val items = ListRepository.getItems(this)
-        binding.listEditor.setText(items.joinToString("\n"))
+        // Prefill the list editor
+        binding.listEditor.setText(ListRepository.getItems(this).joinToString("\n"))
         refreshCounter()
+
+        // Prefill the pins editor + max-pins input
+        binding.pinsEditor.setText(ListRepository.getPins(this).joinToString("\n"))
+        binding.maxPinsInput.setText(ListRepository.getMaxPins(this).toString())
+        refreshPinsDesc()
 
         binding.listEditor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                refreshCounter()
-            }
+            override fun afterTextChanged(s: Editable?) { refreshCounter() }
         })
 
         binding.btnSave.setOnClickListener {
@@ -52,6 +54,21 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
 
+        binding.btnSavePins.setOnClickListener {
+            val maxRaw = binding.maxPinsInput.text.toString().trim()
+            val max = maxRaw.toIntOrNull()?.coerceIn(1, 30)
+                ?: ListRepository.DEFAULT_MAX_PINS
+            ListRepository.setMaxPins(this, max)
+            binding.maxPinsInput.setText(max.toString())
+
+            ListRepository.savePinsText(this, binding.pinsEditor.text.toString())
+
+            // Reflect trimming back into the editor (in case user went over the cap)
+            binding.pinsEditor.setText(ListRepository.getPins(this).joinToString("\n"))
+            refreshPinsDesc()
+            Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+        }
+
         binding.btnEnableAccessibility.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
@@ -70,13 +87,42 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnFloating.setOnClickListener { toggleFloating() }
+
+        binding.btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        // Reload contents from storage every time the user returns —
+        // the floating buttons may have consumed list items or the
+        // pins may have been trimmed after changing max pins.
+        reloadListEditor()
+        reloadPinsEditor()
         updatePermissionButtons()
         updateFloatingButton()
         refreshCounter()
+        refreshPinsDesc()
+    }
+
+    private fun reloadListEditor() {
+        val stored = ListRepository.getItems(this).joinToString("\n")
+        val current = binding.listEditor.text?.toString() ?: ""
+        // Only overwrite if storage differs AND the editor isn't being
+        // actively typed into (no focus = safe to replace).
+        if (stored != current && !binding.listEditor.hasFocus()) {
+            binding.listEditor.setText(stored)
+        }
+    }
+
+    private fun reloadPinsEditor() {
+        val stored = ListRepository.getPins(this).joinToString("\n")
+        val current = binding.pinsEditor.text?.toString() ?: ""
+        if (stored != current && !binding.pinsEditor.hasFocus()) {
+            binding.pinsEditor.setText(stored)
+        }
+        binding.maxPinsInput.setText(ListRepository.getMaxPins(this).toString())
     }
 
     private fun refreshCounter() {
@@ -86,6 +132,13 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.counter_format, items.size, items.first())
         }
+    }
+
+    private fun refreshPinsDesc() {
+        binding.pinsDesc.text = getString(
+            R.string.pins_desc,
+            ListRepository.getMaxPins(this)
+        )
     }
 
     private fun updatePermissionButtons() {
