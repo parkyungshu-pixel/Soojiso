@@ -1,0 +1,10 @@
+extracted/
+
+# Android / Gradle
+.gradle/
+autofill-android/.gradle/
+autofill-android/build/
+autofill-android/app/build/
+autofill-android/local.properties
+*.iml
+.idea/
