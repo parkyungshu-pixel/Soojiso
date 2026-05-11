@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMEI Country Checker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>IMEI Country Checker</h1>
+                <p class="subtitle">Identify the country of origin from an IMEI number</p>
+            </div>
+
+            <div class="input-section">
+                <label for="imei-input">Enter IMEI Number</label>
+                <div class="input-wrapper">
+                    <input type="text" id="imei-input" placeholder="e.g. 353456789012345" maxlength="15" autocomplete="off">
+                    <button id="check-btn" onclick="checkIMEI()">Check</button>
+                </div>
+                <p class="hint">Dial *#06# on your phone to find your IMEI</p>
+            </div>
+
+            <div id="error-msg" class="error hidden"></div>
+
+            <div id="result" class="result hidden">
+                <div class="result-header">
+                    <span id="country-flag" class="flag"></span>
+                    <h2 id="country-name"></h2>
+                </div>
+                <div class="result-details">
+                    <div class="detail-row">
+                        <span class="label">IMEI</span>
+                        <span id="result-imei" class="value"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">TAC (Type Allocation Code)</span>
+                        <span id="result-tac" class="value"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Reporting Body</span>
+                        <span id="result-rbi" class="value"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Country / Region</span>
+                        <span id="result-country" class="value"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Valid IMEI</span>
+                        <span id="result-valid" class="value"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>How it works</h3>
+                <p>The IMEI (International Mobile Equipment Identity) is a unique 15-digit number assigned to every mobile device. The first 8 digits form the TAC (Type Allocation Code), and the first 2 digits identify the Reporting Body that allocated the device code, which maps to a specific country or region.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
