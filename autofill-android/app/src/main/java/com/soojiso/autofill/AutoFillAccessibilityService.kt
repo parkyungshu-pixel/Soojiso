@@ -4,18 +4,17 @@ import android.accessibilityservice.AccessibilityService
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.Toast
 
 /**
  * Accessibility service that types text into whichever input field
- * the user currently has focused in any app. Triggered via a static
- * call from the floating button service.
+ * the user currently has focused in any app. Triggered via static
+ * calls from the floating button service.
  */
 class AutoFillAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // We don't need to react to events — we only use this service
-        // to get a handle on window content when the user taps ⚡.
+        // to get a handle on window content when the user taps a button.
     }
 
     override fun onInterrupt() {
@@ -58,13 +57,11 @@ class AutoFillAccessibilityService : AccessibilityService() {
     }
 
     private fun findFocusedInputNode(): AccessibilityNodeInfo? {
-        // Try input focus first (typing caret), then accessibility focus.
         val root = rootInActiveWindow ?: return null
         val inputFocus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
         if (inputFocus != null && inputFocus.isEditable) {
             return inputFocus
         }
-        // Walk the tree if findFocus didn't work (some apps misreport focus).
         return findEditableInTree(root).also {
             if (it !== inputFocus) inputFocus?.recycle()
         }
@@ -77,7 +74,6 @@ class AutoFillAccessibilityService : AccessibilityService() {
             val found = findEditableInTree(root.getChild(i))
             if (found != null) return found
         }
-        // Fallback: any editable, even if not reported as focused
         if (root.isEditable) return root
         return null
     }
@@ -87,13 +83,13 @@ class AutoFillAccessibilityService : AccessibilityService() {
         private var instance: AutoFillAccessibilityService? = null
 
         fun isRunning(): Boolean = instance != null
+        fun get(): AutoFillAccessibilityService? = instance
 
         /**
          * Type the next item from the saved list into the focused input.
-         * Only consumes the item if the fill actually succeeds — so if
-         * you tap ⚡ without a focused input, nothing is lost.
+         * Only consumes the item if the fill actually succeeds.
          */
-        fun triggerFill(): TriggerResult {
+        fun triggerFillNextFromList(): TriggerResult {
             val svc = instance ?: return TriggerResult.NOT_RUNNING
             val items = ListRepository.getItems(svc)
             if (items.isEmpty()) return TriggerResult.EMPTY_LIST
@@ -107,8 +103,21 @@ class AutoFillAccessibilityService : AccessibilityService() {
             }
         }
 
-        fun toast(svc: AccessibilityService, msg: String) {
-            Toast.makeText(svc, msg, Toast.LENGTH_SHORT).show()
+        /** Fill whatever is currently on the system clipboard. */
+        fun triggerFillLatestClipboard(): TriggerResult {
+            val svc = instance ?: return TriggerResult.NOT_RUNNING
+            val value = ClipboardHelper.getLatest(svc)
+                ?: return TriggerResult.EMPTY_CLIPBOARD
+            val ok = svc.fillFocusedInput(value)
+            return if (ok) TriggerResult.SUCCESS else TriggerResult.NO_INPUT
+        }
+
+        /** Fill a specific pinned value. */
+        fun triggerFillPinned(value: String): TriggerResult {
+            val svc = instance ?: return TriggerResult.NOT_RUNNING
+            if (value.isEmpty()) return TriggerResult.EMPTY_LIST
+            val ok = svc.fillFocusedInput(value)
+            return if (ok) TriggerResult.SUCCESS else TriggerResult.NO_INPUT
         }
     }
 
@@ -116,6 +125,7 @@ class AutoFillAccessibilityService : AccessibilityService() {
         SUCCESS,
         NO_INPUT,
         EMPTY_LIST,
+        EMPTY_CLIPBOARD,
         NOT_RUNNING
     }
 }
