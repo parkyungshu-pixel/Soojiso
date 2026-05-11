@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/bg">
+    android:background="@color/ink_black">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,197 +13,418 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="@color/text"
-            android:paddingBottom="4dp" />
-
-        <TextView
-            android:id="@+id/counter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/muted"
-            android:textSize="13sp"
-            android:paddingBottom="16dp"
-            tools:text="3 items remaining · Next: Juan Dela Cruz"
-            xmlns:tools="http://schemas.android.com/tools" />
-
-        <!-- List editor card -->
-        <androidx.cardview.widget.CardView
+        <!-- ============ Hero / brand header ============ -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="2dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            android:orientation="vertical"
+            android:padding="18dp"
+            android:background="@drawable/card_bg">
 
+            <!-- Top row: Yami badge + Tokiyuki badge -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/title_list"
+                    android:background="@drawable/yami_badge_bg"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/app_author"
+                    android:textColor="@color/sakura_gold"
                     android:textStyle="bold"
-                    android:textSize="15sp"
-                    android:textColor="@color/text" />
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/tokiyuki_badge_bg"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/app_hero"
+                    android:textColor="@color/samurai_red_dark"
+                    android:textStyle="bold"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/app_name"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/paper_white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_tagline"
+                android:textColor="@color/sakura_gold"
+                android:textSize="12sp"
+                android:textStyle="italic" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/app_hero_sub"
+                android:textColor="@color/mist_gray"
+                android:textSize="11sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/app_motto"
+                android:textColor="@color/samurai_red"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+
+            <TextView
+                android:id="@+id/counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/mist_gray"
+                android:textSize="12sp"
+                tools:text="3 in list · Next: Juan Dela Cruz" />
+        </LinearLayout>
+
+        <!-- ============ Quick actions row ============ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_floating"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp"
+                android:text="@string/start_floating" />
+
+            <Button
+                android:id="@+id/btn_settings"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="@string/open_settings" />
+        </LinearLayout>
+
+        <!-- ============ Auto-fill list ============ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:background="@drawable/card_bg">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title_list"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:textColor="@color/paper_white" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/list_desc"
+                android:textColor="@color/mist_gray"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/list_editor"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/input_bg"
+                android:gravity="top|start"
+                android:hint="@string/hint_list"
+                android:textColorHint="@color/mist_gray"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:padding="10dp"
+                android:textSize="14sp"
+                android:textColor="@color/paper_white"
+                android:fontFamily="monospace"
+                android:importantForAutofill="no" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_save"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="@string/save" />
+
+                <Button
+                    android:id="@+id/btn_clear"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/clear" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============ Pinned items ============ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:background="@drawable/card_bg">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title_pins"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:textColor="@color/paper_white" />
+
+            <TextView
+                android:id="@+id/pins_desc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/mist_gray"
+                android:textSize="12sp"
+                tools:text="Up to 30 pins." />
+
+            <EditText
+                android:id="@+id/pins_editor"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/input_bg"
+                android:gravity="top|start"
+                android:hint="@string/hint_pins"
+                android:textColorHint="@color/mist_gray"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:padding="10dp"
+                android:textSize="14sp"
+                android:textColor="@color/paper_white"
+                android:fontFamily="monospace"
+                android:importantForAutofill="no" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/max_pins_label"
+                    android:textColor="@color/paper_white"
+                    android:textSize="13sp" />
 
                 <EditText
-                    android:id="@+id/list_editor"
-                    android:layout_width="match_parent"
-                    android:layout_height="180dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@color/bg"
-                    android:gravity="top|start"
-                    android:hint="@string/hint_list"
-                    android:inputType="textMultiLine|textNoSuggestions"
-                    android:padding="10dp"
-                    android:textSize="14sp"
-                    android:textColor="@color/text"
-                    android:fontFamily="monospace"
-                    android:importantForAutofill="no" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                    android:id="@+id/max_pins_input"
+                    android:layout_width="64dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/input_bg"
+                    android:inputType="number"
+                    android:padding="6dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/paper_white"
+                    android:importantForAutofill="no"
+                    tools:text="5" />
 
-                    <Button
-                        android:id="@+id/btn_save"
-                        style="@style/Widget.MaterialComponents.Button"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="6dp"
-                        android:text="@string/save" />
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
 
-                    <Button
-                        android:id="@+id/btn_clear"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="6dp"
-                        android:text="@string/clear" />
-                </LinearLayout>
+                <Button
+                    android:id="@+id/btn_save_pins"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/save" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </LinearLayout>
 
-        <!-- Permissions card -->
-        <androidx.cardview.widget.CardView
+        <!-- ============ Legend ============ -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="2dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:background="@drawable/card_bg">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/legend_title"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:textColor="@color/paper_white" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/legend_list"
+                android:textColor="@color/paper_white"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/legend_clipboard"
+                android:textColor="@color/paper_white"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/legend_pinned"
+                android:textColor="@color/paper_white"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- ============ Permissions ============ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:background="@drawable/card_bg">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/permissions_title"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:textColor="@color/paper_white" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <TextView
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_accessibility"
+                        android:textColor="@color/paper_white"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_accessibility_desc"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btn_enable_accessibility"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/permissions_title"
-                    android:textStyle="bold"
-                    android:textSize="15sp"
-                    android:textColor="@color/text" />
-
-                <!-- Accessibility -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_accessibility"
-                            android:textColor="@color/text"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_accessibility_desc"
-                            android:textColor="@color/muted"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <Button
-                        android:id="@+id/btn_enable_accessibility"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/enable" />
-                </LinearLayout>
-
-                <!-- Overlay -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_overlay"
-                            android:textColor="@color/text"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_overlay_desc"
-                            android:textColor="@color/muted"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <Button
-                        android:id="@+id/btn_enable_overlay"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/enable" />
-                </LinearLayout>
+                    android:text="@string/enable" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
 
-        <Button
-            android:id="@+id/btn_floating"
-            style="@style/Widget.MaterialComponents.Button"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_overlay"
+                        android:textColor="@color/paper_white"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_overlay_desc"
+                        android:textColor="@color/mist_gray"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btn_enable_overlay"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/enable" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============ Footer credit ============ -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="14dp"
-            android:paddingBottom="14dp"
-            android:text="@string/start_floating" />
+            android:layout_marginTop="18dp"
+            android:gravity="center"
+            android:text="@string/settings_copyright"
+            android:textColor="@color/sakura_gold_soft"
+            android:textSize="11sp" />
 
     </LinearLayout>
 </ScrollView>
