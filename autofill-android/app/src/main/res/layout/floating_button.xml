@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The root container holds three circular buttons stacked vertically.
+  The whole container is the drag handle; taps on individual buttons
+  still fire their own click listeners.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/floating_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/btn_fill_list"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/floating_button_bg"
+        android:gravity="center"
+        android:text="⚡"
+        android:textColor="@color/on_primary"
+        android:textSize="24sp"
+        android:elevation="8dp"
+        android:contentDescription="Fill next list item" />
+
+    <TextView
+        android:id="@+id/btn_fill_clipboard"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/floating_button_bg"
+        android:gravity="center"
+        android:text="📋"
+        android:textColor="@color/on_primary"
+        android:textSize="22sp"
+        android:elevation="8dp"
+        android:contentDescription="Paste latest clipboard" />
+
+    <TextView
+        android:id="@+id/btn_fill_pinned"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:background="@drawable/floating_button_bg"
+        android:gravity="center"
+        android:text="📌"
+        android:textColor="@color/on_primary"
+        android:textSize="22sp"
+        android:elevation="8dp"
+        android:contentDescription="Pick pinned item" />
+
+</LinearLayout>

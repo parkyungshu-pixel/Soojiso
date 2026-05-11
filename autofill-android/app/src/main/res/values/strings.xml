@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AutoFill List</string>
+
+    <string name="accessibility_service_description">Types the selected item into whichever input field you currently have focused. Used only when you tap one of the floating buttons.</string>
+
+    <string name="title_list">Your list (one item per line)</string>
+    <string name="hint_list">Juan Dela Cruz\nMaria Santos\nPedro Reyes</string>
+    <string name="save">Save</string>
+    <string name="clear">Clear</string>
+
+    <string name="title_pins">Pinned items</string>
+    <string name="pins_desc">Up to %1$d items. Tap 📌 on the floating panel to pick one to paste.</string>
+    <string name="hint_pins">Email address\nPhone number\nHome address</string>
+    <string name="max_pins_label">Max pins:</string>
+    <string name="apply">Apply</string>
+
+    <string name="permissions_title">Permissions</string>
+    <string name="perm_accessibility">1. Accessibility Service</string>
+    <string name="perm_accessibility_desc">Allows the app to type into the currently focused input field of any app.</string>
+    <string name="perm_overlay">2. Display over other apps</string>
+    <string name="perm_overlay_desc">Shows the floating buttons on top of other apps so you can tap them anywhere.</string>
+    <string name="enable">Enable</string>
+    <string name="enabled">Enabled ✓</string>
+
+    <string name="start_floating">Show floating buttons</string>
+    <string name="stop_floating">Hide floating buttons</string>
+
+    <string name="counter_format">%1$d item(s) in list · Next: %2$s</string>
+    <string name="counter_empty">List is empty. Add some items above.</string>
+
+    <string name="notif_channel_name">AutoFill</string>
+    <string name="notif_channel_desc">Keeps the floating buttons running.</string>
+    <string name="notif_title">AutoFill is active</string>
+    <string name="notif_text">Tap ⚡ list, 📋 clipboard, or 📌 pinned on the floating panel.</string>
+
+    <string name="toast_no_focus">Tap an input field first, then tap a button</string>
+    <string name="toast_filled">Filled ✓</string>
+    <string name="toast_fill_failed">Can\'t fill this field</string>
+    <string name="toast_empty">List is empty</string>
+    <string name="toast_empty_clipboard">Clipboard is empty</string>
+    <string name="toast_no_pins">No pinned items yet. Add some in the app.</string>
+    <string name="toast_saved">Saved</string>
+    <string name="toast_service_off">Enable the Accessibility service first</string>
+
+    <string name="legend_title">Floating buttons</string>
+    <string name="legend_list">⚡  Fill next list item (consumes it)</string>
+    <string name="legend_clipboard">📋  Paste latest clipboard content</string>
+    <string name="legend_pinned">📌  Pick a pinned item to paste</string>
+</resources>
