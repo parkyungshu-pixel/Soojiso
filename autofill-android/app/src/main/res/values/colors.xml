@@ -1,11 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#111827</color>
-    <color name="primary_dark">#0b0f19</color>
-    <color name="on_primary">#FFFFFF</color>
-    <color name="accent">#10B981</color>
-    <color name="bg">#F3F4F6</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="text">#111827</color>
-    <color name="muted">#6B7280</color>
+    <!-- Elusive Samurai palette: deep ink night, crimson samurai red, sakura gold. -->
+    <color name="ink_black">#0A0A0E</color>
+    <color name="ink_charcoal">#14141C</color>
+    <color name="ink_surface">#1C1C28</color>
+    <color name="ink_surface_elevated">#24243A</color>
+    <color name="ink_divider">#2E2E44</color>
+
+    <color name="samurai_red">#C8102E</color>
+    <color name="samurai_red_dark">#8B0A1F</color>
+    <color name="samurai_red_muted">#5A0812</color>
+
+    <color name="sakura_gold">#E4C96C</color>
+    <color name="sakura_gold_soft">#8F7A2F</color>
+
+    <color name="paper_white">#F5EEDC</color>
+    <color name="mist_gray">#9CA0B0</color>
+
+    <!-- Legacy aliases so existing layouts compile unchanged -->
+    <color name="primary">@color/samurai_red</color>
+    <color name="primary_dark">@color/samurai_red_dark</color>
+    <color name="on_primary">@color/paper_white</color>
+    <color name="accent">@color/sakura_gold</color>
+    <color name="bg">@color/ink_black</color>
+    <color name="surface">@color/ink_surface</color>
+    <color name="text">@color/paper_white</color>
+    <color name="muted">@color/mist_gray</color>
 </resources>
