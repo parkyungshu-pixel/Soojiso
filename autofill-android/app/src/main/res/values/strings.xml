@@ -7,18 +7,28 @@
     <string name="app_hero_sub">Hōjō Tokiyuki · 北条 時行</string>
     <string name="app_motto">Strike fast. Fill faster.</string>
 
-    <string name="accessibility_service_description">Types the next item from your list into the first or second input field of whichever app is in the foreground when you tap a floating button.</string>
+    <string name="accessibility_service_description">Types values from your List 1, List 2, or Password list into the 1st, 2nd, or 3rd input field of whichever app is in the foreground when you tap a floating button.</string>
 
     <!-- Main list card -->
-    <string name="title_list">Auto-fill list (one item per line)</string>
-    <string name="list_desc">Tap ① or ② on the floating panel to fill the next item into the first or second input field. The used line is removed from the list.</string>
+    <string name="title_list">List 1 · IMEI (one per line)</string>
+    <string name="list_desc">Tap ① on the floating panel to type the next line into the FIRST input of the foreground app. The used line is removed from this list.</string>
     <string name="hint_list">355123456789012\n355123456789013\n355123456789014</string>
     <string name="save">Save</string>
     <string name="clear">Clear</string>
 
+    <!-- List 2 card -->
+    <string name="title_list2">List 2 · Persistent (one per line)</string>
+    <string name="list2_desc">Tap ② on the floating panel to type the next line into the SECOND input. Nothing is deleted — it cycles through this list so you can reuse the same values forever.</string>
+    <string name="hint_list2">Juan Dela Cruz\nMaria Santos</string>
+
+    <!-- Password list card -->
+    <string name="title_password">Password list · Persistent</string>
+    <string name="password_desc">Tap 🔒 on the floating panel to type the next line into the THIRD input (typically a password field). Persistent — nothing is deleted, even with just one line.</string>
+    <string name="hint_password">YourSecurePassword123</string>
+
     <!-- Keep list card -->
     <string name="title_keep">Keep list</string>
-    <string name="keep_desc">Tap ★ on the floating panel right after a fill to copy the just-used item here. Values you don\'t tap ★ for are discarded permanently.</string>
+    <string name="keep_desc">Tap ★ on the floating panel right after a ① fill to save the just-used IMEI here. Values you don\'t tap ★ for are discarded permanently.</string>
     <string name="hint_keep">Kept items will appear here, one per line.</string>
 
     <!-- Permissions -->
@@ -26,7 +36,7 @@
     <string name="perm_accessibility">1. Accessibility Service</string>
     <string name="perm_accessibility_desc">Allows the app to type into input fields of other apps.</string>
     <string name="perm_overlay">2. Display over other apps</string>
-    <string name="perm_overlay_desc">Shows the floating ①②★ panel on top of other apps.</string>
+    <string name="perm_overlay_desc">Shows the floating ①②🔒★ panel on top of other apps.</string>
     <string name="enable">Enable</string>
     <string name="enabled">Enabled ✓</string>
 
@@ -39,18 +49,21 @@
     <string name="counter_format">%1$d in list · Next: %2$s</string>
     <string name="counter_empty">List is empty. Add some items above.</string>
     <string name="keep_counter">%1$d item(s) kept</string>
+    <string name="list2_counter">%1$d line(s) · cycles</string>
+    <string name="password_counter">%1$d line(s) · cycles</string>
 
     <!-- Notification -->
     <string name="notif_channel_name">AutoFill</string>
     <string name="notif_channel_desc">Keeps the floating buttons running.</string>
     <string name="notif_title">Soojiso AutoFill is active</string>
-    <string name="notif_text">Tap ① or ② to fill · Tap ★ to keep the last item.</string>
+    <string name="notif_text">Tap ① · ② · 🔒 to fill · Tap ★ to keep the last ① fill.</string>
 
     <!-- Toasts -->
     <string name="toast_filled_slot">Filled input #%1$d ✓</string>
     <string name="toast_no_inputs">No input fields on this screen</string>
     <string name="toast_not_enough_inputs">This screen has fewer than %1$d input(s)</string>
     <string name="toast_empty">List is empty</string>
+    <string name="toast_empty_slot">List for slot %1$d is empty</string>
     <string name="toast_service_off">Enable the Accessibility service first</string>
     <string name="toast_nothing_to_keep">Nothing to keep yet — fill something first</string>
     <string name="toast_kept">Kept: %1$s</string>
@@ -58,9 +71,10 @@
 
     <!-- Legend -->
     <string name="legend_title">Floating buttons</string>
-    <string name="legend_fill_1">①  Fill next list item into the FIRST input</string>
-    <string name="legend_fill_2">②  Fill next list item into the SECOND input</string>
-    <string name="legend_keep">★  Keep the last filled item (saves it to the Keep list)</string>
+    <string name="legend_fill_1">①  List 1 → FIRST input (line is consumed)</string>
+    <string name="legend_fill_2">②  List 2 → SECOND input (persistent, cycles)</string>
+    <string name="legend_fill_password">🔒  Password list → THIRD input (persistent)</string>
+    <string name="legend_keep">★  Keep the last ① fill (saves it to the Keep list)</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

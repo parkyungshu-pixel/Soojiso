@@ -23,6 +23,8 @@ class MainActivity : AppCompatActivity() {
 
         // Initial contents
         binding.listEditor.setText(ListRepository.getItems(this).joinToString("\n"))
+        binding.list2Editor.setText(ListRepository.getList2(this).joinToString("\n"))
+        binding.passwordEditor.setText(ListRepository.getPassword(this).joinToString("\n"))
         binding.keepEditor.setText(ListRepository.getKeep(this).joinToString("\n"))
         refreshCounters()
 
@@ -53,6 +55,20 @@ class MainActivity : AppCompatActivity() {
         binding.btnSaveKeep.setOnClickListener {
             ListRepository.saveKeepText(this, binding.keepEditor.text.toString())
             binding.keepEditor.setText(ListRepository.getKeep(this).joinToString("\n"))
+            refreshCounters()
+            toast(R.string.toast_saved)
+        }
+
+        binding.btnSaveList2.setOnClickListener {
+            ListRepository.saveList2Text(this, binding.list2Editor.text.toString())
+            binding.list2Editor.setText(ListRepository.getList2(this).joinToString("\n"))
+            refreshCounters()
+            toast(R.string.toast_saved)
+        }
+
+        binding.btnSavePassword.setOnClickListener {
+            ListRepository.savePasswordText(this, binding.passwordEditor.text.toString())
+            binding.passwordEditor.setText(ListRepository.getPassword(this).joinToString("\n"))
             refreshCounters()
             toast(R.string.toast_saved)
         }
@@ -96,6 +112,14 @@ class MainActivity : AppCompatActivity() {
         if (storedList != binding.listEditor.text.toString() && !binding.listEditor.hasFocus()) {
             binding.listEditor.setText(storedList)
         }
+        val storedList2 = ListRepository.getList2(this).joinToString("\n")
+        if (storedList2 != binding.list2Editor.text.toString() && !binding.list2Editor.hasFocus()) {
+            binding.list2Editor.setText(storedList2)
+        }
+        val storedPassword = ListRepository.getPassword(this).joinToString("\n")
+        if (storedPassword != binding.passwordEditor.text.toString() && !binding.passwordEditor.hasFocus()) {
+            binding.passwordEditor.setText(storedPassword)
+        }
         val storedKeep = ListRepository.getKeep(this).joinToString("\n")
         if (storedKeep != binding.keepEditor.text.toString() && !binding.keepEditor.hasFocus()) {
             binding.keepEditor.setText(storedKeep)
@@ -111,6 +135,10 @@ class MainActivity : AppCompatActivity() {
         }
         binding.keepCounter.text =
             getString(R.string.keep_counter, ListRepository.getKeep(this).size)
+        binding.list2Counter.text =
+            getString(R.string.list2_counter, ListRepository.getList2(this).size)
+        binding.passwordCounter.text =
+            getString(R.string.password_counter, ListRepository.getPassword(this).size)
     }
 
     private fun updatePermissionButtons() {

@@ -200,6 +200,138 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- ============ List 2 (persistent, cycles) ============ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:background="@drawable/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/title_list2"
+                    android:textStyle="bold"
+                    android:textSize="15sp"
+                    android:textColor="@color/paper_white" />
+
+                <TextView
+                    android:id="@+id/list2_counter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/sakura_gold"
+                    android:textSize="12sp"
+                    tools:text="2 line(s) · cycles" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/list2_desc"
+                android:textColor="@color/mist_gray"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/list2_editor"
+                android:layout_width="match_parent"
+                android:layout_height="140dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/input_bg"
+                android:gravity="top|start"
+                android:hint="@string/hint_list2"
+                android:textColorHint="@color/mist_gray"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:padding="10dp"
+                android:textSize="14sp"
+                android:textColor="@color/paper_white"
+                android:fontFamily="monospace"
+                android:importantForAutofill="no" />
+
+            <Button
+                android:id="@+id/btn_save_list2"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/save" />
+        </LinearLayout>
+
+        <!-- ============ Password list (persistent, cycles) ============ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:background="@drawable/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/title_password"
+                    android:textStyle="bold"
+                    android:textSize="15sp"
+                    android:textColor="@color/paper_white" />
+
+                <TextView
+                    android:id="@+id/password_counter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/sakura_gold"
+                    android:textSize="12sp"
+                    tools:text="1 line(s) · cycles" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/password_desc"
+                android:textColor="@color/mist_gray"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/password_editor"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/input_bg"
+                android:gravity="top|start"
+                android:hint="@string/hint_password"
+                android:textColorHint="@color/mist_gray"
+                android:inputType="textMultiLine|textNoSuggestions|textVisiblePassword"
+                android:padding="10dp"
+                android:textSize="14sp"
+                android:textColor="@color/paper_white"
+                android:fontFamily="monospace"
+                android:importantForAutofill="no" />
+
+            <Button
+                android:id="@+id/btn_save_password"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/save" />
+        </LinearLayout>
+
         <!-- ============ Keep list ============ -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -296,6 +428,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="@string/legend_fill_2"
+                android:textColor="@color/paper_white"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/legend_fill_password"
                 android:textColor="@color/paper_white"
                 android:textSize="13sp" />
 

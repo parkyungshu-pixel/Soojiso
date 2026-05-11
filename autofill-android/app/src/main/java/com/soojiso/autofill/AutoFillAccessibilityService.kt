@@ -7,20 +7,22 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 
 /**
- * Accessibility service that types text into an input field in the
+ * Accessibility service that types text into input fields of the
  * foreground app.
  *
- * Design:
- *  - Two fill modes: FIRST (1st editable) and SECOND (2nd editable)
- *    in the app window. This matches the "fill 1" and "fill 2"
- *    floating buttons — no need for the user to tap a specific
- *    field first.
- *  - We walk getWindows() in order, skipping IME/system/overlay
- *    windows, so overlays from this app or the on-screen keyboard
- *    don't confuse the search.
- *  - Editable enumeration is a pre-order traversal of the app
- *    window's view tree, matching the visual top-to-bottom order in
- *    typical forms.
+ * Three fill entry points, one per floating button:
+ *  - [triggerFillSlot1]    — consumes from the IMEI-style list
+ *  - [triggerFillSlot2]    — cycles through a persistent 2nd list
+ *  - [triggerFillPassword] — cycles through a persistent password list
+ *
+ * We walk getWindows() in order, skipping IME/system/overlay
+ * windows, so overlays from this app or the on-screen keyboard
+ * don't confuse the "which window is frontmost?" question.
+ *
+ * Editable enumeration is a pre-order traversal of the app window's
+ * view tree, which approximates visible top-to-bottom order — so
+ * "slot 1" is almost always the visually topmost input, "slot 2"
+ * the next, and so on.
  */
 class AutoFillAccessibilityService : AccessibilityService() {
 
@@ -131,15 +133,12 @@ class AutoFillAccessibilityService : AccessibilityService() {
         fun get(): AutoFillAccessibilityService? = instance
 
         /**
-         * Pop the first item from the list and type it into the
-         * [index1Based] input of the foreground app. Only consumes
-         * the list item if the fill actually succeeds.
-         *
-         * On success, [ListRepository.lastConsumed] is set to the
-         * value that was just filled so the Keep button can promote
-         * it later.
+         * ① Fill: pop the next item from `items` and type it into
+         * slot 1. Only consumes the list item if the fill actually
+         * succeeds, and records [ListRepository.lastConsumed] so the
+         * Keep button can promote it.
          */
-        fun triggerFillNextInto(index1Based: Int): TriggerResult {
+        fun triggerFillSlot1(): TriggerResult {
             val svc = instance ?: return TriggerResult.NOT_RUNNING
             val items = ListRepository.getItems(svc)
             if (items.isEmpty()) return TriggerResult.EMPTY_LIST
@@ -147,9 +146,9 @@ class AutoFillAccessibilityService : AccessibilityService() {
 
             val n = svc.countInputs()
             if (n == 0) return TriggerResult.NO_INPUT
-            if (n < index1Based) return TriggerResult.NOT_ENOUGH_INPUTS
+            if (n < 1) return TriggerResult.NOT_ENOUGH_INPUTS
 
-            val ok = svc.fillNthInput(index1Based, next)
+            val ok = svc.fillNthInput(1, next)
             return if (ok) {
                 ListRepository.saveItems(svc, items.drop(1))
                 ListRepository.setLastConsumed(svc, next)
@@ -157,6 +156,40 @@ class AutoFillAccessibilityService : AccessibilityService() {
             } else {
                 TriggerResult.NO_INPUT
             }
+        }
+
+        /**
+         * ② Fill: cycle to the next value of `list2` and type it
+         * into slot 2. The list is persistent — nothing is removed.
+         */
+        fun triggerFillSlot2(): TriggerResult {
+            val svc = instance ?: return TriggerResult.NOT_RUNNING
+            val value = ListRepository.takeNextList2(svc)
+                ?: return TriggerResult.EMPTY_LIST
+
+            val n = svc.countInputs()
+            if (n == 0) return TriggerResult.NO_INPUT
+            if (n < 2) return TriggerResult.NOT_ENOUGH_INPUTS
+
+            val ok = svc.fillNthInput(2, value)
+            return if (ok) TriggerResult.SUCCESS else TriggerResult.NO_INPUT
+        }
+
+        /**
+         * 🔒 Fill: cycle to the next value of the `password` list
+         * and type it into slot 3. Password list is persistent.
+         */
+        fun triggerFillPassword(): TriggerResult {
+            val svc = instance ?: return TriggerResult.NOT_RUNNING
+            val value = ListRepository.takeNextPassword(svc)
+                ?: return TriggerResult.EMPTY_LIST
+
+            val n = svc.countInputs()
+            if (n == 0) return TriggerResult.NO_INPUT
+            if (n < 3) return TriggerResult.NOT_ENOUGH_INPUTS
+
+            val ok = svc.fillNthInput(3, value)
+            return if (ok) TriggerResult.SUCCESS else TriggerResult.NO_INPUT
         }
     }
 
