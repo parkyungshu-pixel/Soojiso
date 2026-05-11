@@ -6,38 +6,36 @@ import android.content.Context
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 
 /**
  * Accessibility service that types text into whichever input field
- * the user currently has focused in any app. Triggered via static
- * calls from the floating button service.
+ * the user currently has focused in any app.
  *
- * Also acts as the authoritative source for "latest clipboard text"
- * by registering a PrimaryClipChangedListener. On Android 10+ the
- * system restricts clipboard reads to the focused app, but a running
- * accessibility service is allowed to observe clip changes, so we
- * cache the latest value as the user copies things throughout the
- * day.
+ * Design notes:
+ *  - Focus detection iterates over [getWindows] so we can skip our
+ *    own overlay panel and the IME keyboard — otherwise
+ *    rootInActiveWindow can return the wrong window and we either
+ *    find no editable at all or find the wrong one (e.g. filling the
+ *    email field when the user was actually typing in password).
+ *  - We deliberately do NOT fall back to "any editable in the tree"
+ *    when findFocus() fails. Filling a random field is worse than
+ *    doing nothing; the user will see a clear "tap an input first"
+ *    toast instead.
+ *  - Clipboard reads are allowed for the accessibility service's
+ *    own context regardless of app focus, so we always try a fresh
+ *    read first and only fall back to the listener-cached value.
  */
 class AutoFillAccessibilityService : AccessibilityService() {
 
-    // --- Clipboard caching ---
+    // Clipboard caching via listener (fires when user copies anywhere)
     @Volatile private var latestClip: String? = null
     private var clipManager: ClipboardManager? = null
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         updateClipCache()
     }
 
-    // --- Target caching (set by the floating service right before opening
-    //     the pin picker, so the selection fills the field that WAS focused
-    //     when the user tapped 📌, not whatever is focused at pick time).
-    @Volatile private var cachedTarget: AccessibilityNodeInfo? = null
-
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // We don't react to events — just need the service alive so we can
-        // read focused input and observe clipboard changes.
-    }
-
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* not needed */ }
     override fun onInterrupt() { /* no-op */ }
 
     override fun onServiceConnected() {
@@ -56,8 +54,6 @@ class AutoFillAccessibilityService : AccessibilityService() {
             clipManager?.removePrimaryClipChangedListener(clipListener)
         } catch (_: Throwable) { /* ignore */ }
         clipManager = null
-        cachedTarget?.recycle()
-        cachedTarget = null
         if (instance === this) instance = null
         super.onDestroy()
     }
@@ -68,86 +64,86 @@ class AutoFillAccessibilityService : AccessibilityService() {
             val clip = cm.primaryClip ?: return
             if (clip.itemCount <= 0) return
             val text = clip.getItemAt(0).coerceToText(this)?.toString()
-            if (!text.isNullOrEmpty()) {
-                latestClip = text
-            }
+            if (!text.isNullOrEmpty()) latestClip = text
         } catch (_: Throwable) { /* ignore */ }
     }
 
     /**
-     * Capture and remember the currently-focused input node so it can
-     * be filled later even after another overlay window (e.g. the pin
-     * picker) steals the "active window" spot.
+     * Fresh clipboard read from the accessibility service's own context.
+     * The OS allows this regardless of which app currently has focus,
+     * because accessibility services are a trusted clipboard reader.
      */
-    fun rememberFocusedTarget(): Boolean {
-        cachedTarget?.recycle()
-        cachedTarget = findFocusedInputNode()
-        return cachedTarget != null
-    }
-
-    fun forgetTarget() {
-        cachedTarget?.recycle()
-        cachedTarget = null
+    private fun readClipboardNow(): String? {
+        return try {
+            val cm = clipManager
+                ?: (getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+                ?: return null
+            val clip = cm.primaryClip ?: return null
+            if (clip.itemCount <= 0) return null
+            val text = clip.getItemAt(0).coerceToText(this)?.toString()
+            text?.takeIf { it.isNotEmpty() }
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     /**
-     * Fill the currently-focused input node with [value]. If the user
-     * previously called [rememberFocusedTarget] and that node is still
-     * alive, we fill that instead — this is what makes the pin picker
-     * put text into the right field (e.g. a password field, not the
-     * email field earlier in the form).
+     * Locate the input field the user is currently typing into.
+     *
+     * Returns null if no such field exists — callers should surface a
+     * "tap an input first" message instead of falling back to a
+     * "best guess" field (which historically filled the wrong input
+     * on forms with multiple EditTexts).
      */
-    fun fillTarget(value: String, useCached: Boolean): Boolean {
-        val node = if (useCached) {
-            cachedTarget ?: findFocusedInputNode()
-        } else {
-            findFocusedInputNode()
-        } ?: return false
+    fun findFocusedInputNode(): AccessibilityNodeInfo? {
+        val candidates: List<AccessibilityWindowInfo> = try {
+            windows?.filterNotNull().orEmpty()
+        } catch (_: Throwable) {
+            emptyList()
+        }
 
+        // Top-most first; skip IME, system UI, and our own overlays.
+        for (w in candidates) {
+            when (w.type) {
+                AccessibilityWindowInfo.TYPE_INPUT_METHOD,
+                AccessibilityWindowInfo.TYPE_SYSTEM,
+                AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY -> continue
+            }
+            val root = w.root ?: continue
+            val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            if (focused != null && focused.isEditable) {
+                return focused
+            }
+        }
+
+        // Last-resort fallback for devices that don't expose windows()
+        // reliably. Only trust findFocus — never return an arbitrary
+        // editable, since that can fill the wrong field.
+        val root = rootInActiveWindow ?: return null
+        val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        if (focused != null && focused.isEditable) return focused
+        return null
+    }
+
+    /**
+     * Type [value] into whichever input field is currently focused.
+     * Returns true on success.
+     */
+    fun fillFocused(value: String): Boolean {
+        val node = findFocusedInputNode() ?: return false
         val args = Bundle().apply {
             putCharSequence(
                 AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
                 value
             )
         }
-
         val ok = try {
             node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
         } catch (_: Throwable) {
             false
         }
-
-        // Only recycle the cached reference if we just consumed it; otherwise
-        // callers may want to re-use it.
-        if (useCached) {
-            cachedTarget?.recycle()
-            cachedTarget = null
-        } else {
-            node.recycle()
-        }
+        node.recycle()
         return ok
-    }
-
-    private fun findFocusedInputNode(): AccessibilityNodeInfo? {
-        val root = rootInActiveWindow ?: return null
-        val inputFocus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (inputFocus != null && inputFocus.isEditable) {
-            return inputFocus
-        }
-        val walked = findEditableInTree(root)
-        if (walked !== inputFocus) inputFocus?.recycle()
-        return walked
-    }
-
-    private fun findEditableInTree(root: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
-        if (root == null) return null
-        if (root.isEditable && root.isFocused) return root
-        for (i in 0 until root.childCount) {
-            val found = findEditableInTree(root.getChild(i))
-            if (found != null) return found
-        }
-        if (root.isEditable) return root
-        return null
     }
 
     companion object {
@@ -163,7 +159,7 @@ class AutoFillAccessibilityService : AccessibilityService() {
             val items = ListRepository.getItems(svc)
             if (items.isEmpty()) return TriggerResult.EMPTY_LIST
             val next = items.first()
-            val ok = svc.fillTarget(next, useCached = false)
+            val ok = svc.fillFocused(next)
             return if (ok) {
                 ListRepository.saveItems(svc, items.drop(1))
                 TriggerResult.SUCCESS
@@ -172,39 +168,48 @@ class AutoFillAccessibilityService : AccessibilityService() {
             }
         }
 
-        /** Type the latest observed clipboard value. */
+        /** Type the latest clipboard value into the focused field. */
         fun triggerFillLatestClipboard(): TriggerResult {
             val svc = instance ?: return TriggerResult.NOT_RUNNING
-            // Prefer our cached value (updated via clip-change listener);
-            // fall back to reading it directly in case the listener
-            // hasn't fired yet.
-            val value = svc.latestClip
-                ?: ClipboardHelper.getLatest(svc)
+            // Always try a fresh read from the a11y service context —
+            // more reliable than the listener cache on some OEMs.
+            val value = svc.readClipboardNow()
+                ?: svc.latestClip
                 ?: return TriggerResult.EMPTY_CLIPBOARD
-            val ok = svc.fillTarget(value, useCached = false)
+            val ok = svc.fillFocused(value)
             return if (ok) TriggerResult.SUCCESS else TriggerResult.NO_INPUT
         }
 
         /**
-         * Fill a specific pinned value into the target that was focused
-         * when the picker opened.
+         * Type a specific pinned value. We re-query the focused input at
+         * fill time (rather than caching a node reference when the
+         * picker opened), because cached AccessibilityNodeInfo handles
+         * go stale quickly on many devices.
          */
         fun triggerFillPinned(value: String): TriggerResult {
             val svc = instance ?: return TriggerResult.NOT_RUNNING
             if (value.isEmpty()) return TriggerResult.EMPTY_LIST
-            val ok = svc.fillTarget(value, useCached = true)
+            val ok = svc.fillFocused(value)
             return if (ok) TriggerResult.SUCCESS else TriggerResult.NO_INPUT
         }
 
-        /** Remember the current focused input (called before opening picker). */
+        /**
+         * No-op today (kept for binary compatibility with the floating
+         * service, which calls it defensively). We used to cache a node
+         * reference here but that proved unreliable; we now re-query
+         * focus at fill time instead.
+         */
         fun captureCurrentTarget(): Boolean {
-            return instance?.rememberFocusedTarget() ?: false
+            val svc = instance ?: return false
+            // Return true iff there's currently a focused editable input —
+            // this way the floating service can still gate "show picker"
+            // on "is there somewhere to fill?".
+            val node = svc.findFocusedInputNode() ?: return false
+            node.recycle()
+            return true
         }
 
-        /** Forget the cached focus (called when picker is cancelled). */
-        fun clearCapturedTarget() {
-            instance?.forgetTarget()
-        }
+        fun clearCapturedTarget() { /* no-op, see captureCurrentTarget */ }
     }
 
     enum class TriggerResult {
