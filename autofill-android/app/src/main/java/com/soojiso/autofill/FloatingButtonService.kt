@@ -14,25 +14,21 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import kotlin.math.abs
 
 /**
- * Foreground service that shows a draggable panel of three buttons on
- * top of all apps:
+ * Foreground service that shows a small draggable panel with three
+ * buttons on top of every app:
  *
- *  ⚡  — fill the next item from the saved list (consumes it)
- *  📋 — fill whatever is on the system clipboard right now
- *  📌 — open a picker of pinned items (up to the configured max)
+ *  ①  Fill 1 — fill the next list item into the FIRST input field
+ *  ②  Fill 2 — fill the next list item into the SECOND input field
+ *  ★  Keep  — move the most recently-consumed item to the Keep list
  *
- * All three buttons route to [AutoFillAccessibilityService] which
- * re-queries the currently focused input field at fill time. We
- * deliberately no longer cache a node reference when the pin picker
- * opens (that caused stale-node failures on many devices).
+ * All button taps delegate to [AutoFillAccessibilityService] for the
+ * actual typing / list manipulation, and show a toast with the
+ * outcome.
  */
 class FloatingButtonService : Service() {
 
@@ -40,15 +36,13 @@ class FloatingButtonService : Service() {
     private var floatingView: View? = null
     private lateinit var layoutParams: WindowManager.LayoutParams
 
-    private var pickerView: View? = null
-
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         startAsForeground()
-        showFloatingButton()
+        showFloatingPanel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -60,12 +54,11 @@ class FloatingButtonService : Service() {
     }
 
     override fun onDestroy() {
-        removePinPicker()
-        removeFloatingButton()
+        removeFloatingPanel()
         super.onDestroy()
     }
 
-    // -------- Foreground notification --------
+    // ---------------- Foreground notification ----------------
 
     private fun startAsForeground() {
         val channelId = "autofill_floating"
@@ -87,13 +80,10 @@ class FloatingButtonService : Service() {
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-
         val stopIntent = PendingIntent.getService(
             this,
             1,
-            Intent(this, FloatingButtonService::class.java).apply {
-                action = ACTION_STOP
-            },
+            Intent(this, FloatingButtonService::class.java).apply { action = ACTION_STOP },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -102,11 +92,7 @@ class FloatingButtonService : Service() {
             .setContentText(getString(R.string.notif_text))
             .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setContentIntent(openAppIntent)
-            .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "Stop",
-                stopIntent
-            )
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopIntent)
             .setOngoing(true)
             .build()
 
@@ -121,10 +107,10 @@ class FloatingButtonService : Service() {
         }
     }
 
-    // -------- Floating panel --------
+    // ---------------- Floating panel ----------------
 
     @Suppress("ClickableViewAccessibility")
-    private fun showFloatingButton() {
+    private fun showFloatingPanel() {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val view = inflater.inflate(R.layout.floating_button, null)
 
@@ -147,149 +133,61 @@ class FloatingButtonService : Service() {
         windowManager.addView(view, layoutParams)
         floatingView = view
 
-        val btnList = view.findViewById<View>(R.id.btn_fill_list)
-        val btnClip = view.findViewById<View>(R.id.btn_fill_clipboard)
-        val btnPin = view.findViewById<View>(R.id.btn_fill_pinned)
-
-        btnList.setOnTouchListener(DragClickListener { onFillListTapped() })
-        btnClip.setOnTouchListener(DragClickListener { onFillClipboardTapped() })
-        btnPin.setOnTouchListener(DragClickListener { onFillPinnedTapped() })
+        view.findViewById<View>(R.id.btn_fill_1)
+            .setOnTouchListener(DragClickListener { onFill(1) })
+        view.findViewById<View>(R.id.btn_fill_2)
+            .setOnTouchListener(DragClickListener { onFill(2) })
+        view.findViewById<View>(R.id.btn_keep)
+            .setOnTouchListener(DragClickListener { onKeep() })
     }
 
-    private fun removeFloatingButton() {
+    private fun removeFloatingPanel() {
         val v = floatingView ?: return
         try { windowManager.removeView(v) } catch (_: Throwable) { }
         floatingView = null
     }
 
-    // -------- Button actions --------
+    // ---------------- Button actions ----------------
 
-    private fun onFillListTapped() {
+    private fun onFill(slot: Int) {
         if (!AutoFillAccessibilityService.isRunning()) {
             Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
             return
         }
-        showResult(AutoFillAccessibilityService.triggerFillNextFromList())
+        val result = AutoFillAccessibilityService.triggerFillNextInto(slot)
+        val msg = when (result) {
+            AutoFillAccessibilityService.TriggerResult.SUCCESS ->
+                getString(R.string.toast_filled_slot, slot)
+            AutoFillAccessibilityService.TriggerResult.NO_INPUT ->
+                getString(R.string.toast_no_inputs)
+            AutoFillAccessibilityService.TriggerResult.NOT_ENOUGH_INPUTS ->
+                getString(R.string.toast_not_enough_inputs, slot)
+            AutoFillAccessibilityService.TriggerResult.EMPTY_LIST ->
+                getString(R.string.toast_empty)
+            AutoFillAccessibilityService.TriggerResult.NOT_RUNNING ->
+                getString(R.string.toast_service_off)
+        }
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    private fun onFillClipboardTapped() {
-        if (!AutoFillAccessibilityService.isRunning()) {
-            Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
+    private fun onKeep() {
+        val last = ListRepository.getLastConsumed(this)
+        if (last.isNullOrEmpty()) {
+            Toast.makeText(this, R.string.toast_nothing_to_keep, Toast.LENGTH_SHORT).show()
             return
         }
-        showResult(AutoFillAccessibilityService.triggerFillLatestClipboard())
+        ListRepository.appendKeep(this, last)
+        // After keeping, clear the marker so the same item can't
+        // accidentally be kept twice from back-to-back taps.
+        ListRepository.clearLastConsumed(this)
+        Toast.makeText(
+            this,
+            getString(R.string.toast_kept, last),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
-    private fun onFillPinnedTapped() {
-        if (!AutoFillAccessibilityService.isRunning()) {
-            Toast.makeText(this, R.string.toast_service_off, Toast.LENGTH_SHORT).show()
-            return
-        }
-        val pins = ListRepository.getPins(this)
-        if (pins.isEmpty()) {
-            Toast.makeText(this, R.string.toast_no_pins, Toast.LENGTH_SHORT).show()
-            return
-        }
-        // Verify a focused input exists BEFORE opening the picker so we
-        // can show a clear "tap an input first" toast instead of opening
-        // a useless menu.
-        if (!AutoFillAccessibilityService.captureCurrentTarget()) {
-            Toast.makeText(this, R.string.toast_no_focus, Toast.LENGTH_SHORT).show()
-            return
-        }
-        showPinPicker(pins)
-    }
-
-    private fun showResult(result: AutoFillAccessibilityService.TriggerResult) {
-        val msgRes = when (result) {
-            AutoFillAccessibilityService.TriggerResult.SUCCESS -> R.string.toast_filled
-            AutoFillAccessibilityService.TriggerResult.NO_INPUT -> R.string.toast_no_focus
-            AutoFillAccessibilityService.TriggerResult.EMPTY_LIST -> R.string.toast_empty
-            AutoFillAccessibilityService.TriggerResult.EMPTY_CLIPBOARD -> R.string.toast_empty_clipboard
-            AutoFillAccessibilityService.TriggerResult.NOT_RUNNING -> R.string.toast_service_off
-        }
-        Toast.makeText(this, msgRes, Toast.LENGTH_SHORT).show()
-    }
-
-    // -------- Pin picker overlay --------
-
-    @Suppress("ClickableViewAccessibility")
-    private fun showPinPicker(pins: List<String>) {
-        removePinPicker()
-
-        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val view = inflater.inflate(R.layout.pin_picker, null)
-        val listContainer = view.findViewById<LinearLayout>(R.id.pin_list)
-        val closeBtn = view.findViewById<TextView>(R.id.pin_close)
-
-        pins.forEachIndexed { index, value ->
-            val row = TextView(this).apply {
-                text = "${index + 1}. $value"
-                setTextColor(0xFFF5EEDC.toInt())
-                textSize = 14f
-                setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
-                setBackgroundResource(R.drawable.pin_item_bg)
-                maxLines = 2
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                setOnClickListener {
-                    // Fill FIRST (while the target field is still focused
-                    // under the non-focusable picker), then remove the
-                    // picker. Re-querying focus happens inside the
-                    // accessibility service.
-                    val result = AutoFillAccessibilityService.triggerFillPinned(value)
-                    removePinPicker()
-                    showResult(result)
-                }
-            }
-            val lp = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dpToPx(4) }
-            listContainer.addView(row, lp)
-        }
-
-        closeBtn.setOnClickListener { removePinPicker() }
-
-        // FLAG_NOT_FOCUSABLE is crucial: it keeps the user's input field
-        // focused in the app below, so accessibility focus lookup still
-        // returns the right field when the user taps a pin.
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            val dm = resources.displayMetrics
-            val estimatedWidth = dpToPx(240)
-            val panelX = layoutParams.x
-            x = (panelX - estimatedWidth - dpToPx(12)).coerceAtLeast(dpToPx(8))
-            y = layoutParams.y.coerceAtMost(dm.heightPixels - dpToPx(260))
-        }
-
-        view.setOnTouchListener { _, ev ->
-            if (ev.action == MotionEvent.ACTION_OUTSIDE) {
-                removePinPicker()
-                true
-            } else false
-        }
-
-        windowManager.addView(view, params)
-        pickerView = view
-    }
-
-    private fun removePinPicker() {
-        val v = pickerView ?: return
-        try { windowManager.removeView(v) } catch (_: Throwable) { }
-        pickerView = null
-    }
-
-    // -------- Utils --------
+    // ---------------- Utils ----------------
 
     private fun overlayType(): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -301,7 +199,7 @@ class FloatingButtonService : Service() {
     private fun dpToPx(dp: Int): Int =
         (dp * resources.displayMetrics.density).toInt()
 
-    /** Tap-or-drag listener. Drags move the whole floating panel. */
+    /** Tap vs drag handler: dragging moves the whole panel. */
     private inner class DragClickListener(
         private val onClick: () -> Unit
     ) : View.OnTouchListener {
@@ -316,7 +214,6 @@ class FloatingButtonService : Service() {
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    if (pickerView != null) removePinPicker()
                     initialX = layoutParams.x
                     initialY = layoutParams.y
                     initialTouchX = event.rawX

@@ -21,25 +21,21 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Prefill the list editor
+        // Initial contents
         binding.listEditor.setText(ListRepository.getItems(this).joinToString("\n"))
-        refreshCounter()
-
-        // Prefill the pins editor + max-pins input
-        binding.pinsEditor.setText(ListRepository.getPins(this).joinToString("\n"))
-        binding.maxPinsInput.setText(ListRepository.getMaxPins(this).toString())
-        refreshPinsDesc()
+        binding.keepEditor.setText(ListRepository.getKeep(this).joinToString("\n"))
+        refreshCounters()
 
         binding.listEditor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) { refreshCounter() }
+            override fun afterTextChanged(s: Editable?) { refreshCounters() }
         })
 
         binding.btnSave.setOnClickListener {
             ListRepository.saveText(this, binding.listEditor.text.toString())
-            refreshCounter()
-            Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+            refreshCounters()
+            toast(R.string.toast_saved)
         }
 
         binding.btnClear.setOnClickListener {
@@ -48,25 +44,17 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton(R.string.clear) { _, _ ->
                     ListRepository.saveItems(this, emptyList())
                     binding.listEditor.setText("")
-                    refreshCounter()
+                    refreshCounters()
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
 
-        binding.btnSavePins.setOnClickListener {
-            val maxRaw = binding.maxPinsInput.text.toString().trim()
-            val max = maxRaw.toIntOrNull()?.coerceIn(1, 30)
-                ?: ListRepository.DEFAULT_MAX_PINS
-            ListRepository.setMaxPins(this, max)
-            binding.maxPinsInput.setText(max.toString())
-
-            ListRepository.savePinsText(this, binding.pinsEditor.text.toString())
-
-            // Reflect trimming back into the editor (in case user went over the cap)
-            binding.pinsEditor.setText(ListRepository.getPins(this).joinToString("\n"))
-            refreshPinsDesc()
-            Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+        binding.btnSaveKeep.setOnClickListener {
+            ListRepository.saveKeepText(this, binding.keepEditor.text.toString())
+            binding.keepEditor.setText(ListRepository.getKeep(this).joinToString("\n"))
+            refreshCounters()
+            toast(R.string.toast_saved)
         }
 
         binding.btnEnableAccessibility.setOnClickListener {
@@ -82,12 +70,11 @@ class MainActivity : AppCompatActivity() {
                     )
                 )
             } else {
-                Toast.makeText(this, R.string.enabled, Toast.LENGTH_SHORT).show()
+                toast(R.string.enabled)
             }
         }
 
         binding.btnFloating.setOnClickListener { toggleFloating() }
-
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -95,50 +82,35 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Reload contents from storage every time the user returns —
-        // the floating buttons may have consumed list items or the
-        // pins may have been trimmed after changing max pins.
-        reloadListEditor()
-        reloadPinsEditor()
+        // Reload from storage on every return — the floating buttons may
+        // have removed items from the list or appended to the Keep list
+        // while we weren't visible.
+        reloadEditors()
         updatePermissionButtons()
         updateFloatingButton()
-        refreshCounter()
-        refreshPinsDesc()
+        refreshCounters()
     }
 
-    private fun reloadListEditor() {
-        val stored = ListRepository.getItems(this).joinToString("\n")
-        val current = binding.listEditor.text?.toString() ?: ""
-        // Only overwrite if storage differs AND the editor isn't being
-        // actively typed into (no focus = safe to replace).
-        if (stored != current && !binding.listEditor.hasFocus()) {
-            binding.listEditor.setText(stored)
+    private fun reloadEditors() {
+        val storedList = ListRepository.getItems(this).joinToString("\n")
+        if (storedList != binding.listEditor.text.toString() && !binding.listEditor.hasFocus()) {
+            binding.listEditor.setText(storedList)
+        }
+        val storedKeep = ListRepository.getKeep(this).joinToString("\n")
+        if (storedKeep != binding.keepEditor.text.toString() && !binding.keepEditor.hasFocus()) {
+            binding.keepEditor.setText(storedKeep)
         }
     }
 
-    private fun reloadPinsEditor() {
-        val stored = ListRepository.getPins(this).joinToString("\n")
-        val current = binding.pinsEditor.text?.toString() ?: ""
-        if (stored != current && !binding.pinsEditor.hasFocus()) {
-            binding.pinsEditor.setText(stored)
-        }
-        binding.maxPinsInput.setText(ListRepository.getMaxPins(this).toString())
-    }
-
-    private fun refreshCounter() {
+    private fun refreshCounters() {
         val items = ListRepository.getItems(this)
         binding.counter.text = if (items.isEmpty()) {
             getString(R.string.counter_empty)
         } else {
             getString(R.string.counter_format, items.size, items.first())
         }
-    }
-
-    private fun refreshPinsDesc() {
-        binding.pinsDesc.text = getString(
-            R.string.pins_desc,
-            ListRepository.getMaxPins(this)
-        )
+        binding.keepCounter.text =
+            getString(R.string.keep_counter, ListRepository.getKeep(this).size)
     }
 
     private fun updatePermissionButtons() {
@@ -166,7 +138,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun toggleFloating() {
         if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, R.string.perm_overlay, Toast.LENGTH_SHORT).show()
+            toast(R.string.perm_overlay)
             return
         }
         val intent = Intent(this, FloatingButtonService::class.java)
@@ -187,5 +159,9 @@ class MainActivity : AppCompatActivity() {
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
         return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+    }
+
+    private fun toast(res: Int) {
+        Toast.makeText(this, res, Toast.LENGTH_SHORT).show()
     }
 }

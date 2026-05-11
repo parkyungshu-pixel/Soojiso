@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/ink_black"
@@ -38,7 +37,7 @@
                 android:gravity="end" />
         </LinearLayout>
 
-        <!-- ============ Pins ============ -->
+        <!-- Keep list management -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -50,7 +49,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_pins_header"
+                android:text="@string/settings_keep_header"
                 android:textColor="@color/paper_white"
                 android:textStyle="bold"
                 android:textSize="15sp" />
@@ -59,52 +58,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/settings_pins_summary"
+                android:text="@string/settings_keep_summary"
                 android:textColor="@color/mist_gray"
                 android:textSize="12sp" />
 
-            <LinearLayout
+            <Button
+                android:id="@+id/btn_clear_keep"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/max_pins_label"
-                    android:textColor="@color/paper_white"
-                    android:textSize="13sp" />
-
-                <EditText
-                    android:id="@+id/max_pins_input"
-                    android:layout_width="72dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/input_bg"
-                    android:inputType="number"
-                    android:padding="8dp"
-                    android:textColor="@color/paper_white"
-                    android:textSize="13sp"
-                    android:importantForAutofill="no"
-                    tools:text="30" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
-
-                <Button
-                    android:id="@+id/btn_apply_pins"
-                    style="@style/Widget.MaterialComponents.Button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/apply" />
-            </LinearLayout>
+                android:text="@string/settings_clear_keep" />
         </LinearLayout>
 
-        <!-- ============ Theme ============ -->
+        <!-- Theme info -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -129,7 +96,6 @@
                 android:textColor="@color/mist_gray"
                 android:textSize="12sp" />
 
-            <!-- Palette swatches -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -165,7 +131,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ============ Credits ============ -->
+        <!-- Credits -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -182,7 +148,6 @@
                 android:textStyle="bold"
                 android:textSize="15sp" />
 
-            <!-- Yami author chip -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -206,7 +171,6 @@
                 android:textColor="@color/paper_white"
                 android:textSize="13sp" />
 
-            <!-- Tokiyuki badge -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

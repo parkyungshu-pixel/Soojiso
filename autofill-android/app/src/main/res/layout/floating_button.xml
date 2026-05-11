@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The root container holds three circular buttons stacked vertically.
-  The whole container is the drag handle; taps on individual buttons
-  still fire their own click listeners.
+  Three stacked circular buttons. The LinearLayout itself has no
+  touch listener; each child button has its own, so drags and taps
+  land on the right button even though the whole column is movable.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/floating_root"
@@ -13,41 +13,43 @@
     android:padding="4dp">
 
     <TextView
-        android:id="@+id/btn_fill_list"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
+        android:id="@+id/btn_fill_1"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
         android:layout_marginBottom="6dp"
         android:background="@drawable/floating_button_bg"
         android:gravity="center"
-        android:text="⚡"
+        android:text="1"
         android:textColor="@color/on_primary"
-        android:textSize="24sp"
+        android:textSize="22sp"
+        android:textStyle="bold"
         android:elevation="8dp"
-        android:contentDescription="Fill next list item" />
+        android:contentDescription="Fill first input" />
 
     <TextView
-        android:id="@+id/btn_fill_clipboard"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
+        android:id="@+id/btn_fill_2"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
         android:layout_marginBottom="6dp"
         android:background="@drawable/floating_button_bg"
         android:gravity="center"
-        android:text="📋"
+        android:text="2"
         android:textColor="@color/on_primary"
         android:textSize="22sp"
+        android:textStyle="bold"
         android:elevation="8dp"
-        android:contentDescription="Paste latest clipboard" />
+        android:contentDescription="Fill second input" />
 
     <TextView
-        android:id="@+id/btn_fill_pinned"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
+        android:id="@+id/btn_keep"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
         android:background="@drawable/floating_button_bg"
         android:gravity="center"
-        android:text="📌"
-        android:textColor="@color/on_primary"
-        android:textSize="22sp"
+        android:text="★"
+        android:textColor="@color/sakura_gold"
+        android:textSize="26sp"
         android:elevation="8dp"
-        android:contentDescription="Pick pinned item" />
+        android:contentDescription="Keep last filled item" />
 
 </LinearLayout>
