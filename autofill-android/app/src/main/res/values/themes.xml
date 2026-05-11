@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      Force dark mode only — this app is themed after the night-time
-      stealth of Nige Jouzu no Wakagimi / The Elusive Samurai.
+      Force dark-mode-only Elusive Samurai theme.
+      Uses the full MaterialComponents parent because the layouts use
+      Widget.MaterialComponents.Button styles — those require all the
+      Material theme attributes (colorOnPrimary, colorSurface, etc.)
+      to resolve at runtime.
     -->
     <style name="Theme.AutoFillList" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:windowBackground">@color/ink_black</item>
@@ -13,12 +16,20 @@
         <item name="colorPrimary">@color/samurai_red</item>
         <item name="colorPrimaryVariant">@color/samurai_red_dark</item>
         <item name="colorOnPrimary">@color/paper_white</item>
+
         <item name="colorSecondary">@color/sakura_gold</item>
+        <item name="colorSecondaryVariant">@color/sakura_gold_soft</item>
         <item name="colorOnSecondary">@color/ink_black</item>
+
         <item name="colorSurface">@color/ink_surface</item>
         <item name="colorOnSurface">@color/paper_white</item>
-        <item name="colorBackground">@color/ink_black</item>
+
+        <item name="android:colorBackground">@color/ink_black</item>
         <item name="colorOnBackground">@color/paper_white</item>
+
+        <item name="colorError">@color/samurai_red</item>
+        <item name="colorOnError">@color/paper_white</item>
+
         <item name="android:textColorPrimary">@color/paper_white</item>
         <item name="android:textColorSecondary">@color/mist_gray</item>
     </style>
